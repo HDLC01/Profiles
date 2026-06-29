@@ -12,6 +12,8 @@ One row per work session. Hanz = the developer.
 
 | 2026-06-30 | 1.5 | Hanz | Verified client portal end-to-end live (Clerk sign-in → grid → profile, 3 demo candidates). UI revamp via ui-ux-pro-max: original "Ledgerline" brand + logomark, navy/blue palette, Plus Jakarta Sans, premium cards/profile, original copy (removed reference wording + "Create Next App" title). Added unit tests (pytest 7 + vitest 4), GitHub Actions CI (backend + frontend), and a staging branch — CI green on main + staging. |
 
+| 2026-06-30 | 2.0 | Hanz | Phase 3 admin side: media upload endpoint (+/api/media serving), admin-gated candidate CRUD UI (list w/ publish toggle, edit, delete-confirm), intake form (multi-select skills/software + add-new, assessment ratings, photo/video/résumé upload, Assess link), taxonomy CRUD page, AdminGuard + admin nav. Verified live signed-in admin (create flow end-to-end); pytest/vitest/build green. Roadmap updated. |
+
 <!-- Append a new row each session. Keep "Hours" as a decimal (e.g. 0.5, 2.0). Total below. -->
 
-**Running total:** 6.0 h
+**Running total:** 8.0 h
