@@ -2,23 +2,32 @@
 
 A Clerk-gated API over a dockerized Postgres. Middleware verifies the Clerk JWT
 on every /api/* call (except public paths) and stashes the user on request.state;
-routers add candidate browse + admin CRUD, taxonomy CRUD, and the shortlist.
+routers add candidate browse + admin CRUD, taxonomy CRUD, the shortlist, and
+admin media upload.
 """
 from __future__ import annotations
 
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 import clerk_auth
 import config
-from routers import account, candidates, catalog
+from routers import account, candidates, catalog, uploads
 
 log = logging.getLogger("profiles")
 
+# Exact public paths + the read-only media prefix (so <img>/<video> load without
+# a bearer token). Everything else under /api/* requires a valid Clerk token.
 PUBLIC_PATHS = {"/api/health", "/api/healthz"}
+
+
+def _is_public(path: str) -> bool:
+    return path in PUBLIC_PATHS or path.startswith("/api/media/")
 
 
 @asynccontextmanager
@@ -34,11 +43,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Profiles API", lifespan=lifespan)
 
+os.makedirs(config.MEDIA_ROOT, exist_ok=True)
+app.mount("/api/media", StaticFiles(directory=config.MEDIA_ROOT), name="media")
+
 
 @app.middleware("http")
 async def auth_gate(request: Request, call_next):
     path = request.url.path
-    if not path.startswith("/api/") or path in PUBLIC_PATHS:
+    if not path.startswith("/api/") or _is_public(path):
         return await call_next(request)
     try:
         request.state.user = clerk_auth.verify_token(request.headers.get("authorization"))
@@ -55,3 +67,4 @@ def health():
 app.include_router(account.router)
 app.include_router(catalog.router)
 app.include_router(candidates.router)
+app.include_router(uploads.router)

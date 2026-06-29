@@ -22,6 +22,7 @@ venv/
 # docker / data
 pgdata/
 media/
+_media/
 *.tar.gz
 
 # os / editor

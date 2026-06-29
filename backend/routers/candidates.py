@@ -117,21 +117,29 @@ def _full(conn, cid: str, is_admin: bool) -> dict | None:
     c = conn.execute(text("select * from candidates where id::text = :i or slug = :i"), {"i": cid}).mappings().first()
     if not c or (not is_admin and not c["is_published"]):
         return None
-    def names(sql):
-        return [r[0] for r in conn.execute(text(sql), {"c": c["id"]})]
-    skills = names("select s.name from candidate_skills cs join skills s on s.id=cs.skill_id where cs.candidate_id=:c order by s.ordering, s.name")
-    software = names("select s.name from candidate_software cs join software s on s.id=cs.software_id where cs.candidate_id=:c order by s.ordering, s.name")
+
+    def rows(sql):
+        return conn.execute(text(sql), {"c": c["id"]}).mappings()
+
+    skills, skill_ids = [], []
+    for r in rows("select s.id, s.name from candidate_skills cs join skills s on s.id=cs.skill_id where cs.candidate_id=:c order by s.ordering, s.name"):
+        skill_ids.append(str(r["id"]))
+        skills.append(r["name"])
+    software, software_ids = [], []
+    for r in rows("select s.id, s.name from candidate_software cs join software s on s.id=cs.software_id where cs.candidate_id=:c order by s.ordering, s.name"):
+        software_ids.append(str(r["id"]))
+        software.append(r["name"])
     assessments = [
-        {"name": r["name"], "rating": r["rating"]}
-        for r in conn.execute(text(
-            "select a.name, ca.rating from candidate_assessments ca join assessments a on a.id=ca.assessment_id "
-            "where ca.candidate_id=:c order by a.ordering, a.name"), {"c": c["id"]}).mappings()
+        {"assessment_id": str(r["id"]), "name": r["name"], "rating": r["rating"]}
+        for r in rows("select a.id, a.name, ca.rating from candidate_assessments ca join assessments a on a.id=ca.assessment_id where ca.candidate_id=:c order by a.ordering, a.name")
     ]
     d = dict(c)
     for k in ("id", "assess_job_id", "assess_candidate_id"):
         if d.get(k) is not None:
             d[k] = str(d[k])
-    d["skills"], d["software"], d["assessments"] = skills, software, assessments
+    d["skills"], d["software"] = skills, software
+    d["skill_ids"], d["software_ids"] = skill_ids, software_ids
+    d["assessments"] = assessments
     return d
 
 

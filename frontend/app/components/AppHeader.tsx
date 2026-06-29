@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
+import { useMe } from "../lib/useMe";
 
 const NAV = [
   { href: "/candidates", label: "Browse", match: (p: string) => p === "/candidates" || p.startsWith("/candidate") },
   { href: "/shortlist", label: "Shortlist", match: (p: string) => p.startsWith("/shortlist") },
   { href: "/book", label: "Book a Call", match: (p: string) => p.startsWith("/book") },
 ];
+const ADMIN_LINK = { href: "/admin/candidates", label: "Admin", match: (p: string) => p.startsWith("/admin") };
 
 function NavLink({ href, label, active }: { href: string; label: string; active: boolean }) {
   return (
@@ -26,6 +28,8 @@ function NavLink({ href, label, active }: { href: string; label: string; active:
 
 export default function AppHeader() {
   const pathname = usePathname() || "";
+  const { isAdmin } = useMe();
+  const nav = isAdmin ? [...NAV, ADMIN_LINK] : NAV;
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3">
@@ -41,7 +45,7 @@ export default function AppHeader() {
         </Link>
 
         <nav className="ml-2 hidden items-center gap-1 sm:flex" aria-label="Primary">
-          {NAV.map((n) => <NavLink key={n.href} href={n.href} label={n.label} active={n.match(pathname)} />)}
+          {nav.map((n) => <NavLink key={n.href} href={n.href} label={n.label} active={n.match(pathname)} />)}
         </nav>
 
         <div className="flex-1" />

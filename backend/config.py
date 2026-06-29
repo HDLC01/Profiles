@@ -24,6 +24,11 @@ RUN_SEED = _bool(os.environ.get("RUN_SEED"), True)
 PAGE_SIZE = 25  # house rule: lists paginate at 25/page
 ASSESS_BASE_URL = os.environ.get("ASSESS_BASE_URL", "https://assess.wetreadwell.com")
 
+# Media: VPS-local for now (abstract behind this path; swap to a CDN before prod
+# traffic). Served read-only at /api/media; uploads are admin-gated.
+MEDIA_ROOT = os.environ.get("MEDIA_ROOT") or os.path.join(os.path.dirname(__file__), "_media")
+MAX_UPLOAD_MB = int(os.environ.get("MAX_UPLOAD_MB", "50"))
+
 # Admin bootstrap: emails that should be treated as admin on first profile sync.
 ADMIN_EMAILS = {
     e.strip().lower()
