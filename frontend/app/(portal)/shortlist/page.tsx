@@ -28,10 +28,10 @@ export default function ShortlistPage() {
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center">
           <p className="text-sm font-semibold text-slate-700">Your shortlist is empty</p>
           <p className="mt-1 text-xs text-slate-500">Star candidates from their profile to compare them here.</p>
-          <Link href="/candidates" className="mt-3 inline-block text-sm font-bold text-indigo-600">Browse candidates →</Link>
+          <Link href="/candidates" className="mt-3 inline-block text-sm font-bold text-sky-700">Browse candidates →</Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">{items.map((c) => <CandidateCard key={c.id} c={c} />)}</div>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">{items.map((c, i) => <CandidateCard key={c.id} c={c} index={i} />)}</div>
       )}
     </div>
   );
