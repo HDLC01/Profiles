@@ -1,4 +1,5 @@
 """Candidate browse (any signed-in user; clients see published only) + admin CRUD."""
+import os
 import re
 import uuid
 
@@ -9,6 +10,7 @@ from sqlalchemy import bindparam, text
 import config
 from db import connect
 from deps import current_profile, require_admin
+from services import resume_pdf
 
 router = APIRouter(prefix="/api", tags=["candidates"])
 
@@ -195,3 +197,22 @@ def delete_candidate(cid: str, request: Request):
     with connect() as conn:
         conn.execute(text("delete from candidates where id::text = :i"), {"i": cid})
     return {"ok": True}
+
+
+@router.post("/candidates/{cid}/resume")
+def generate_resume(cid: str, request: Request):
+    """Render a standardized résumé PDF from the candidate's data, store it, and
+    point resume_url at it (resume_is_generated=true)."""
+    require_admin(request)
+    with connect() as conn:
+        full = _full(conn, cid, True)
+        if not full:
+            raise HTTPException(status_code=404, detail="Candidate not found")
+        pdf = resume_pdf.build_resume_pdf(full)
+        os.makedirs(config.MEDIA_ROOT, exist_ok=True)
+        name = f"resume-{full['slug']}-{uuid.uuid4().hex[:6]}.pdf"
+        with open(os.path.join(config.MEDIA_ROOT, name), "wb") as fh:
+            fh.write(pdf)
+        url = f"/api/media/{name}"
+        conn.execute(text("update candidates set resume_url=:u, resume_is_generated=true, updated_at=now() where id::text=:i"), {"u": url, "i": cid})
+    return {"resume_url": url}

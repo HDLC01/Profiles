@@ -115,6 +115,7 @@ export default function CandidateForm({ initial }: { initial?: CandidateFull }) 
   const [softwareOpts, setSoftwareOpts] = useState<{ id: string; name: string }[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [genBusy, setGenBusy] = useState(false);
 
   const [f, setF] = useState({
     full_name: initial?.full_name ?? "",
@@ -252,7 +253,26 @@ export default function CandidateForm({ initial }: { initial?: CandidateFull }) 
         <h2 className="text-base font-bold text-slate-900">Media &amp; links</h2>
         <MediaInput label="Profile photo" value={f.photo_url} onChange={(v) => set("photo_url", v)} accept="image/*" />
         <MediaInput label="Intro video" value={f.intro_video_url} onChange={(v) => set("intro_video_url", v)} accept="video/*" hint="MP4/WebM, or paste a hosted URL" />
-        <MediaInput label="Résumé (PDF)" value={f.resume_url} onChange={(v) => set("resume_url", v)} accept="application/pdf" hint="Phase 4 will auto-generate; upload to override" />
+        <MediaInput label="Résumé (PDF)" value={f.resume_url} onChange={(v) => set("resume_url", v)} accept="application/pdf" hint="Auto-generate from this profile, or upload to override" />
+        {initial ? (
+          <button
+            type="button"
+            disabled={genBusy}
+            onClick={async () => {
+              setGenBusy(true);
+              setError(null);
+              try { const r = await api.generateResume(initial.id); set("resume_url", r.resume_url); }
+              catch (e) { setError((e as Error)?.message || "Résumé generation failed"); }
+              finally { setGenBusy(false); }
+            }}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-700 transition hover:bg-sky-100 disabled:opacity-50"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6M9 13l2 2 4-4" /></svg>
+            {genBusy ? "Generating…" : "Generate standardized résumé"}
+          </button>
+        ) : (
+          <p className="text-[11px] text-slate-400">Save the candidate first, then re-open to auto-generate a résumé.</p>
+        )}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Assess job ID" hint="links Personality Type → Assess report"><input className={inputCls} value={f.assess_job_id} onChange={(e) => set("assess_job_id", e.target.value)} /></Field>
           <Field label="Assess candidate ID"><input className={inputCls} value={f.assess_candidate_id} onChange={(e) => set("assess_candidate_id", e.target.value)} /></Field>

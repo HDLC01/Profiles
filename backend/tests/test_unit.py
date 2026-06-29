@@ -59,3 +59,16 @@ def test_slug_is_lowercase_hyphenated_with_suffix():
 
 def test_rating_scale_constant():
     assert {"Below average", "Average", "Above average", "Well above average", "Exceptional"} == candidates.RATINGS
+
+
+# ── résumé PDF ──────────────────────────────────────────────────────────────
+def test_resume_pdf_renders_valid_pdf():
+    from services.resume_pdf import build_resume_pdf
+    pdf = build_resume_pdf({
+        "full_name": "Jordan — Tëst", "role_title": "US Accountant/Bookkeeper",
+        "about": "Reconciliations & reporting — detail-oriented.", "skills": ["Bookkeeping", "AP"],
+        "software": ["QuickBooks Online"], "assessments": [{"name": "Accounting", "rating": "Exceptional"}],
+        "price_monthly": 3000, "experience_label": "3-5 years", "credential": "CPA",
+    })
+    assert pdf[:5] == b"%PDF-"
+    assert len(pdf) > 800

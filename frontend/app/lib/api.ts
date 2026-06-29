@@ -133,6 +133,7 @@ function createApi(getToken: () => Promise<string | null>) {
     createCandidate: (body: CandidateInput) => req<CandidateFull>("/candidates", { method: "POST", body: JSON.stringify(body) }),
     updateCandidate: (id: string, body: CandidateInput) => req<CandidateFull>(`/candidates/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
     deleteCandidate: (id: string) => req<{ ok: boolean }>(`/candidates/${id}`, { method: "DELETE" }),
+    generateResume: (id: string) => req<{ resume_url: string }>(`/candidates/${id}/resume`, { method: "POST" }),
     createCatalogItem: (kind: CatalogKind, body: { name: string; active?: boolean; ordering?: number }) =>
       req<CatalogItem>(`/catalog/${kind}`, { method: "POST", body: JSON.stringify(body) }),
     updateCatalogItem: (kind: CatalogKind, id: string, body: { name: string; active: boolean; ordering: number }) =>
