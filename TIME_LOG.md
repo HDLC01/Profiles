@@ -10,6 +10,8 @@ One row per work session. Hanz = the developer.
 
 | 2026-06-29 | 1.5 | Hanz | Added Profiles to the Treadwell roadmap (external system floor, 6 phases / 20 tasks, deployed live). Phase 2 client portal: Clerk-token API client, nav, candidate grid (search/sort/pagination), full profile page (assessments + personality→Assess link, skills, software, details), shortlist, Calendly booking page. Build/lint green; gate verified (307→sign-in); seeded 3 demo candidates. |
 
+| 2026-06-30 | 1.5 | Hanz | Verified client portal end-to-end live (Clerk sign-in → grid → profile, 3 demo candidates). UI revamp via ui-ux-pro-max: original "Ledgerline" brand + logomark, navy/blue palette, Plus Jakarta Sans, premium cards/profile, original copy (removed reference wording + "Create Next App" title). Added unit tests (pytest 7 + vitest 4), GitHub Actions CI (backend + frontend), and a staging branch — CI green on main + staging. |
+
 <!-- Append a new row each session. Keep "Hours" as a decimal (e.g. 0.5, 2.0). Total below. -->
 
-**Running total:** 4.5 h
+**Running total:** 6.0 h
