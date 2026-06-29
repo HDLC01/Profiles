@@ -16,6 +16,8 @@ One row per work session. Hanz = the developer.
 
 | 2026-06-30 | 1.0 | Hanz | Phase 4 standardized résumé generator: fpdf2 renderer (Ledgerline template, latin-1 safe), POST /api/candidates/{id}/resume (fill→store→set resume_url), "Generate résumé" button in intake form. Verified live (generate → profile résumé link serves valid PDF). pytest 8 + build green. Roadmap Core build now complete. |
 
+| 2026-06-30 | 1.5 | Hanz | Phase 5 deploy prep (prod-only, no VPS staging): backend + frontend (Next standalone) Dockerfiles, .dockerignore, docker-compose build args + media volume, off-box deploy/ship.sh + deploy/install-vps.sh (nginx /api→8901 // →8900 + certbot). Built both images locally (web 308MB / api 421MB), smoke-tested the web container. CI green. Cutover gated on DNS + go-ahead. |
+
 <!-- Append a new row each session. Keep "Hours" as a decimal (e.g. 0.5, 2.0). Total below. -->
 
-**Running total:** 9.0 h
+**Running total:** 10.5 h
