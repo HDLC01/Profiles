@@ -1,0 +1,36 @@
+# env / secrets
+.env
+.env.local
+*.local
+
+# node / next
+node_modules/
+.next/
+out/
+npm-debug.log*
+yarn-debug.log*
+.pnpm-debug.log*
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.uv/
+*.egg-info/
+
+# docker / data
+pgdata/
+media/
+*.tar.gz
+
+# os / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# playwright
+.playwright-mcp/
+test-results/
+playwright-report/
