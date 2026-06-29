@@ -1,0 +1,57 @@
+# Profiles (Cloud Accountant Staffing) — Postgres + FastAPI api + Next.js web.
+# Local dev usually runs only `db` here (api/web run natively for hot reload).
+# Loopback-only ports; nginx is the public surface in prod:
+#   profiles.wetreadwell.com -> 127.0.0.1:8900 (web), /api -> 127.0.0.1:8901 (api)
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: profiles-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-profiles}
+      POSTGRES_USER: ${POSTGRES_USER:-profiles}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-profiles-dev-password}
+    ports:
+      - "127.0.0.1:5437:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-profiles} -d ${POSTGRES_DB:-profiles}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  api:
+    build: ./backend
+    image: profiles-api:latest
+    container_name: profiles-api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+    ports:
+      - "127.0.0.1:8901:8901"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - media:/app/media
+    profiles: ["full"]
+
+  web:
+    build: ./frontend
+    image: profiles-web:latest
+    container_name: profiles-web
+    restart: unless-stopped
+    environment:
+      API_INTERNAL_URL: http://api:8901
+    ports:
+      - "127.0.0.1:8900:3000"
+    depends_on:
+      - api
+    profiles: ["full"]
+
+volumes:
+  pgdata:
+  media:

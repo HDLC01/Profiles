@@ -9,12 +9,29 @@ Treadwell proposal tool's `verify_token`.
 """
 from __future__ import annotations
 
+import base64
 import os
 
 import jwt
 from jwt import PyJWKClient
 
-CLERK_ISSUER = (os.environ.get("CLERK_ISSUER") or "").rstrip("/")
+
+def _issuer_from_pk(pk: str) -> str:
+    """A Clerk publishable key (public) encodes the Frontend API host:
+    pk_(test|live)_<base64(host + '$')>. Derive the issuer from it so we don't
+    have to configure CLERK_ISSUER separately."""
+    try:
+        b64 = pk.split("_", 2)[2]
+        host = base64.b64decode(b64 + "===").decode("utf-8").rstrip("$")
+        return f"https://{host}" if host else ""
+    except Exception:
+        return ""
+
+
+CLERK_ISSUER = (
+    os.environ.get("CLERK_ISSUER")
+    or _issuer_from_pk(os.environ.get("CLERK_PUBLISHABLE_KEY") or os.environ.get("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY") or "")
+).rstrip("/")
 CLERK_JWKS_URL = os.environ.get("CLERK_JWKS_URL") or (
     f"{CLERK_ISSUER}/.well-known/jwks.json" if CLERK_ISSUER else ""
 )
