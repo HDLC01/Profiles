@@ -14,6 +14,8 @@ One row per work session. Hanz = the developer.
 
 | 2026-06-30 | 2.0 | Hanz | Phase 3 admin side: media upload endpoint (+/api/media serving), admin-gated candidate CRUD UI (list w/ publish toggle, edit, delete-confirm), intake form (multi-select skills/software + add-new, assessment ratings, photo/video/résumé upload, Assess link), taxonomy CRUD page, AdminGuard + admin nav. Verified live signed-in admin (create flow end-to-end); pytest/vitest/build green. Roadmap updated. |
 
+| 2026-06-30 | 1.0 | Hanz | Phase 4 standardized résumé generator: fpdf2 renderer (Ledgerline template, latin-1 safe), POST /api/candidates/{id}/resume (fill→store→set resume_url), "Generate résumé" button in intake form. Verified live (generate → profile résumé link serves valid PDF). pytest 8 + build green. Roadmap Core build now complete. |
+
 <!-- Append a new row each session. Keep "Hours" as a decimal (e.g. 0.5, 2.0). Total below. -->
 
-**Running total:** 8.0 h
+**Running total:** 9.0 h
