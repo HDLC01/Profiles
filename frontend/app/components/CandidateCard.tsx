@@ -2,16 +2,16 @@
 
 import Link from "next/link";
 import type { CandidateCard as Card } from "../lib/api";
+import { formatRate, initials } from "../lib/format";
 
 function Avatar({ src, name }: { src: string | null; name: string }) {
   if (src) {
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={src} alt={name} className="h-48 w-full object-cover" />;
   }
-  const initials = name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
   return (
     <div className="grid h-48 w-full place-items-center bg-gradient-to-br from-slate-100 to-slate-200 text-3xl font-extrabold text-slate-400">
-      {initials}
+      {initials(name)}
     </div>
   );
 }
@@ -50,7 +50,7 @@ export default function CandidateCard({ c, index = 0 }: { c: Card; index?: numbe
           </div>
           <div className="text-right">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Rate</p>
-            <p className="tnum text-sm font-bold text-slate-800">{c.price_monthly ? `$${c.price_monthly.toLocaleString()}` : "—"}<span className="text-xs font-medium text-slate-400">/mo</span></p>
+            <p className="tnum text-sm font-bold text-slate-800">{formatRate(c.price_monthly)}{c.price_monthly != null && <span className="text-xs font-medium text-slate-400">/mo</span>}</p>
           </div>
         </div>
         <span className="mt-2 inline-flex items-center gap-1 text-sm font-bold text-sky-700 transition-[gap] group-hover:gap-2">
