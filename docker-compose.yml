@@ -30,6 +30,7 @@ services:
     environment:
       POSTGRES_HOST: db
       POSTGRES_PORT: "5432"
+      MEDIA_ROOT: /app/media
     ports:
       - "127.0.0.1:8901:8901"
     depends_on:
@@ -40,10 +41,15 @@ services:
     profiles: ["full"]
 
   web:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        API_INTERNAL_URL: http://api:8901
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-}
     image: profiles-web:latest
     container_name: profiles-web
     restart: unless-stopped
+    env_file: .env   # CLERK_SECRET_KEY + publishable key at runtime (Clerk middleware)
     environment:
       API_INTERNAL_URL: http://api:8901
     ports:
