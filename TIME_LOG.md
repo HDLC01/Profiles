@@ -3,6 +3,9 @@
 Time spent on this project, billed separately to Will as a different-company engagement.
 One row per work session. Hanz = the developer.
 
+**Source of truth = Hanz's Clockify ("Profile Portal" project). As of 2026-06-30: 6 h 12 m.**
+The per-session "Hours" below are rough estimates and are superseded by Clockify for billing.
+
 | Date | Hours | Who | Summary |
 |------|-------|-----|---------|
 | 2026-06-29 | 1.0 | Hanz | Kickoff: Playwright baseline of portal.cloudaccountantstaffing.com (list + profile data model), architecture exploration of reusable Treadwell patterns (proposal-tool PDF, Assess archetypes, VPS ports/deploy), wrote the build plan, scaffolded the repo (folder, CLAUDE.md, base config), started the Clerk auth spike. |
@@ -22,4 +25,4 @@ One row per work session. Hanz = the developer.
 
 <!-- Append a new row each session. Keep "Hours" as a decimal (e.g. 0.5, 2.0). Total below. -->
 
-**Running total:** 11.5 h
+**Running total (Clockify, authoritative):** 6 h 12 m as of 2026-06-30.
