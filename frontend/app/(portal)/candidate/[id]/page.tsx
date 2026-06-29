@@ -1,0 +1,168 @@
+"use client";
+
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { useApi, type CandidateFull } from "../../../lib/api";
+
+const ASSESS_BASE = "https://assess.wetreadwell.com";
+
+function Chip({ children }: { children: React.ReactNode }) {
+  return <span className="rounded-full border border-indigo-100 bg-indigo-50/60 px-3 py-1 text-sm font-medium text-indigo-700">{children}</span>;
+}
+
+function ActionBtn({ href, onClick, children, primary }: { href?: string; onClick?: () => void; children: React.ReactNode; primary?: boolean }) {
+  const cls = `inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${primary ? "bg-indigo-600 text-white hover:bg-indigo-700" : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"}`;
+  if (href) return <a href={href} target="_blank" rel="noopener noreferrer" className={cls}>{children}</a>;
+  return <button onClick={onClick} className={cls}>{children}</button>;
+}
+
+export default function CandidateProfile() {
+  const api = useApi();
+  const params = useParams<{ id: string }>();
+  const id = params?.id as string;
+  const [c, setC] = useState<CandidateFull | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [shortlisted, setShortlisted] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      setLoading(true);
+      try {
+        const [cand, sl] = await Promise.all([api.getCandidate(id), api.listShortlist().catch(() => ({ items: [] }))]);
+        if (!active) return;
+        setC(cand);
+        setShortlisted(sl.items.some((i) => i.id === cand.id));
+      } catch (e) {
+        const err = e as { status?: number; message?: string };
+        if (active) setError(err?.status === 404 ? "Candidate not found." : (err?.message || "Failed to load"));
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [api, id]);
+
+  const toggleShortlist = useCallback(async () => {
+    if (!c || busy) return;
+    setBusy(true);
+    try {
+      if (shortlisted) { await api.removeShortlist(c.id); setShortlisted(false); }
+      else { await api.addShortlist(c.id); setShortlisted(true); }
+    } finally { setBusy(false); }
+  }, [api, c, shortlisted, busy]);
+
+  if (loading) return <div className="h-96 animate-pulse rounded-2xl border border-slate-200 bg-white" />;
+  if (error || !c) return (
+    <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center">
+      <p className="text-sm font-semibold text-slate-700">{error || "Not found"}</p>
+      <Link href="/candidates" className="mt-2 inline-block text-sm font-bold text-indigo-600">← Back to candidates</Link>
+    </div>
+  );
+
+  const assessUrl = c.assess_job_id && c.assess_candidate_id ? `${ASSESS_BASE}/hire/${c.assess_job_id}/candidate/${c.assess_candidate_id}` : null;
+
+  return (
+    <div className="space-y-6">
+      <Link href="/candidates" className="inline-flex items-center gap-1 text-sm font-semibold text-slate-500 hover:text-slate-800">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M19 12H5M11 6l-6 6 6 6" /></svg>
+        All candidates
+      </Link>
+
+      {/* hero */}
+      <div className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-white p-5 sm:flex-row">
+        {c.photo_url
+          // eslint-disable-next-line @next/next/no-img-element
+          ? <img src={c.photo_url} alt={c.full_name} className="h-40 w-40 shrink-0 rounded-2xl object-cover" />
+          : <div className="grid h-40 w-40 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-indigo-100 to-violet-100 text-4xl font-black text-indigo-400">{c.full_name.split(" ").map((w) => w[0]).slice(0, 2).join("")}</div>}
+        <div className="flex flex-1 flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{c.full_name}</h1>
+            {c.credential && <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-600">{c.credential}</span>}
+          </div>
+          <p className="text-base font-semibold text-indigo-600">{c.role_title}</p>
+          <div className="flex flex-wrap gap-2">
+            {c.intro_video_url && <ActionBtn href={c.intro_video_url}>▶ Intro Video</ActionBtn>}
+            {c.resume_url && <ActionBtn href={c.resume_url}>Resume</ActionBtn>}
+            <ActionBtn onClick={toggleShortlist}>{shortlisted ? "★ Shortlisted" : "☆ Shortlist"}</ActionBtn>
+            <Link href="/book" className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700">Book an Interview →</Link>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* left: experience/price + about */}
+        <div className="space-y-6 lg:col-span-2">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Experience</p>
+              <p className="text-xl font-extrabold text-slate-900">{c.experience_label || "—"}</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Price</p>
+              <p className="text-xl font-extrabold text-slate-900">{c.price_monthly ? `$${c.price_monthly.toLocaleString()}` : "—"}<span className="text-sm font-medium text-slate-400">/mo</span></p>
+            </div>
+          </div>
+          {c.about && (
+            <section className="rounded-2xl border border-slate-200 bg-white p-5">
+              <h2 className="mb-2 text-lg font-bold text-slate-900">About {c.full_name.split(" ")[0]}</h2>
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-600">{c.about}</p>
+            </section>
+          )}
+          {c.skills.length > 0 && (
+            <section className="rounded-2xl border border-slate-200 bg-white p-5">
+              <h2 className="mb-3 text-lg font-bold text-slate-900">Skills</h2>
+              <div className="flex flex-wrap gap-2">{c.skills.map((s) => <Chip key={s}>{s}</Chip>)}</div>
+            </section>
+          )}
+          {c.software.length > 0 && (
+            <section className="rounded-2xl border border-slate-200 bg-white p-5">
+              <h2 className="mb-3 text-lg font-bold text-slate-900">Software</h2>
+              <div className="flex flex-wrap gap-2">{c.software.map((s) => <Chip key={s}>{s}</Chip>)}</div>
+            </section>
+          )}
+        </div>
+
+        {/* right: assessments + details */}
+        <div className="space-y-6">
+          {(c.assessments.length > 0 || assessUrl) && (
+            <section className="rounded-2xl border border-slate-200 bg-white p-5">
+              <h2 className="mb-3 text-lg font-bold text-slate-900">Assessments</h2>
+              <dl className="divide-y divide-slate-100">
+                {c.assessments.map((a) => (
+                  <div key={a.name} className="flex items-center justify-between py-2">
+                    <dt className="text-sm text-slate-600">{a.name}</dt>
+                    <dd className="text-sm font-bold text-slate-900">{a.rating}</dd>
+                  </div>
+                ))}
+                {assessUrl && (
+                  <div className="flex items-center justify-between py-2">
+                    <dt className="text-sm text-slate-600">Personality Type</dt>
+                    <dd><a href={assessUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm font-bold text-indigo-600 hover:underline">View Assess report ↗</a></dd>
+                  </div>
+                )}
+              </dl>
+            </section>
+          )}
+          <section className="rounded-2xl border border-slate-200 bg-white p-5">
+            <h2 className="mb-3 text-lg font-bold text-slate-900">Details</h2>
+            <dl className="space-y-2 text-sm">
+              <div className="flex justify-between"><dt className="text-slate-500">Availability</dt><dd className="font-semibold text-slate-800">{c.availability || "—"}</dd></div>
+              <div className="flex justify-between"><dt className="text-slate-500">Location</dt><dd className="font-semibold text-slate-800">{c.location || "—"}</dd></div>
+            </dl>
+          </section>
+        </div>
+      </div>
+
+      {/* CTA */}
+      <div className="rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 p-6 text-white">
+        <h2 className="text-xl font-extrabold">Interested in adding {c.full_name.split(" ")[0]} to your team?</h2>
+        <p className="mt-1 text-sm text-indigo-100">Book an interview and we&apos;ll set up a call.</p>
+        <Link href="/book" className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-indigo-700 transition hover:bg-indigo-50">Book an Interview →</Link>
+      </div>
+    </div>
+  );
+}
