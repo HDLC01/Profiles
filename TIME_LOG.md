@@ -18,6 +18,8 @@ One row per work session. Hanz = the developer.
 
 | 2026-06-30 | 1.5 | Hanz | Phase 5 deploy prep (prod-only, no VPS staging): backend + frontend (Next standalone) Dockerfiles, .dockerignore, docker-compose build args + media volume, off-box deploy/ship.sh + deploy/install-vps.sh (nginx /api→8901 // →8900 + certbot). Built both images locally (web 308MB / api 421MB), smoke-tested the web container. CI green. Cutover gated on DNS + go-ahead. |
 
+| 2026-06-30 | 1.0 | Hanz | Phase 5 prod cutover: bootstrapped VPS (/opt/profiles, nginx + Let's Encrypt TLS), wrote prod .env (dev Clerk for now), off-box ship.sh deploy. LIVE at https://profiles.wetreadwell.com — health 200, Clerk sign-in renders, gated, DB schema + taxonomies seeded. Roadmap marked launched. |
+
 <!-- Append a new row each session. Keep "Hours" as a decimal (e.g. 0.5, 2.0). Total below. -->
 
-**Running total:** 10.5 h
+**Running total:** 11.5 h
