@@ -23,6 +23,8 @@ The per-session "Hours" below are rough estimates and are superseded by Clockify
 
 | 2026-06-30 | 1.0 | Hanz | Phase 5 prod cutover: bootstrapped VPS (/opt/profiles, nginx + Let's Encrypt TLS), wrote prod .env (dev Clerk for now), off-box ship.sh deploy. LIVE at https://profiles.wetreadwell.com — health 200, Clerk sign-in renders, gated, DB schema + taxonomies seeded. Roadmap marked launched. |
 
+| 2026-06-30 | (Clockify) | Hanz | Phase 6: client-safe personality (label+summary to all; Assess report link admin-only; migration 003) shipped to prod; media→CDN migration note (deploy/MEDIA.md); branch protection on main (force-push/delete blocked); Playwright E2E (profile/grid/admin at 1440+375) which found+fixed a mobile grid overflow. |
+
 <!-- Append a new row each session. Keep "Hours" as a decimal (e.g. 0.5, 2.0). Total below. -->
 
-**Running total (Clockify, authoritative):** 6 h 12 m as of 2026-06-30.
+**Running total (Clockify, authoritative):** see Hanz's Clockify "Profile Portal" (6 h 12 m as of the 2026-06-30 cutover; rises with the Phase 6 session).
