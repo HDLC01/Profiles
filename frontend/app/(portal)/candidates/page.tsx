@@ -74,7 +74,7 @@ export default function CandidatesPage() {
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <div className="relative">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
             <input
@@ -82,14 +82,14 @@ export default function CandidatesPage() {
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search by name or skill…"
               aria-label="Search candidates"
-              className="w-56 rounded-xl border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/25"
+              className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/25 sm:w-56"
             />
           </div>
           <select
             value={sort}
             onChange={(e) => { setSort(e.target.value as Sort); setPage(1); }}
             aria-label="Sort candidates"
-            className="rounded-xl border border-slate-300 bg-white py-2 pl-3 pr-8 text-sm font-medium text-slate-700 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/25"
+            className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-3 pr-8 text-sm font-medium text-slate-700 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/25 sm:w-auto"
           >
             {SORTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
