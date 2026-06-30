@@ -130,6 +130,8 @@ export default function CandidateForm({ initial }: { initial?: CandidateFull }) 
     is_published: initial?.is_published ?? false,
     assess_job_id: initial?.assess_job_id ?? "",
     assess_candidate_id: initial?.assess_candidate_id ?? "",
+    personality_type: initial?.personality_type ?? "",
+    personality_summary: initial?.personality_summary ?? "",
     photo_url: initial?.photo_url ?? "",
     intro_video_url: initial?.intro_video_url ?? "",
     resume_url: initial?.resume_url ?? "",
@@ -180,6 +182,8 @@ export default function CandidateForm({ initial }: { initial?: CandidateFull }) 
       is_published: f.is_published,
       assess_job_id: f.assess_job_id || null,
       assess_candidate_id: f.assess_candidate_id || null,
+      personality_type: f.personality_type || null,
+      personality_summary: f.personality_summary || null,
       skill_ids: [...skills],
       software_ids: [...software],
       assessments: Object.entries(ratings).filter(([, r]) => r).map(([assessment_id, rating]) => ({ assessment_id, rating })),
@@ -273,8 +277,10 @@ export default function CandidateForm({ initial }: { initial?: CandidateFull }) 
         ) : (
           <p className="text-[11px] text-slate-400">Save the candidate first, then re-open to auto-generate a résumé.</p>
         )}
+        <Field label="Personality type" hint="shown to clients, e.g. The Executive / Architect"><input className={inputCls} value={f.personality_type} onChange={(e) => set("personality_type", e.target.value)} /></Field>
+        <Field label="Personality summary" hint="short, client-facing blurb"><textarea rows={2} className={inputCls} value={f.personality_summary} onChange={(e) => set("personality_summary", e.target.value)} /></Field>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="Assess job ID" hint="links Personality Type → Assess report"><input className={inputCls} value={f.assess_job_id} onChange={(e) => set("assess_job_id", e.target.value)} /></Field>
+          <Field label="Assess job ID" hint="staff-only link to the full Assess report"><input className={inputCls} value={f.assess_job_id} onChange={(e) => set("assess_job_id", e.target.value)} /></Field>
           <Field label="Assess candidate ID"><input className={inputCls} value={f.assess_candidate_id} onChange={(e) => set("assess_candidate_id", e.target.value)} /></Field>
         </div>
       </section>

@@ -49,6 +49,8 @@ class CandidateIn(BaseModel):
     is_published: bool = False
     assess_job_id: str | None = None
     assess_candidate_id: str | None = None
+    personality_type: str | None = None
+    personality_summary: str | None = None
     skill_ids: list[str] = []
     software_ids: list[str] = []
     assessments: list[CandidateAssessment] = []
@@ -162,9 +164,11 @@ def create_candidate(body: CandidateIn, request: Request):
         cid = conn.execute(text(
             "insert into candidates (slug, full_name, role_title, about, experience_label, price_monthly, "
             "availability, location, credential, photo_url, intro_video_url, resume_url, status, is_published, "
-            "assess_job_id, assess_candidate_id) values (:slug, :full_name, coalesce(:role_title, 'US Accountant/Bookkeeper'), "
+            "assess_job_id, assess_candidate_id, personality_type, personality_summary) "
+            "values (:slug, :full_name, coalesce(:role_title, 'US Accountant/Bookkeeper'), "
             ":about, :experience_label, :price_monthly, :availability, coalesce(:location,'Philippines'), :credential, "
-            ":photo_url, :intro_video_url, :resume_url, :status, :is_published, :assess_job_id, :assess_candidate_id) "
+            ":photo_url, :intro_video_url, :resume_url, :status, :is_published, :assess_job_id, :assess_candidate_id, "
+            ":personality_type, :personality_summary) "
             "returning id"
         ), {**body.model_dump(exclude={"skill_ids", "software_ids", "assessments"}), "slug": _slug(body.full_name)}).scalar()
         _attach(conn, cid, body.skill_ids, body.software_ids, body.assessments)
@@ -184,7 +188,8 @@ def update_candidate(cid: str, body: CandidateIn, request: Request):
             "about=:about, experience_label=:experience_label, price_monthly=:price_monthly, availability=:availability, "
             "location=coalesce(:location,'Philippines'), credential=:credential, photo_url=:photo_url, "
             "intro_video_url=:intro_video_url, resume_url=:resume_url, status=:status, is_published=:is_published, "
-            "assess_job_id=:assess_job_id, assess_candidate_id=:assess_candidate_id, updated_at=now() where id::text=:i"
+            "assess_job_id=:assess_job_id, assess_candidate_id=:assess_candidate_id, "
+            "personality_type=:personality_type, personality_summary=:personality_summary, updated_at=now() where id::text=:i"
         ), {**body.model_dump(exclude={"skill_ids", "software_ids", "assessments"}), "i": cid})
         _attach(conn, exists, body.skill_ids, body.software_ids, body.assessments)
         full = _full(conn, cid, True)

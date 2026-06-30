@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useApi, type CandidateFull } from "../../../lib/api";
+import { useMe } from "../../../lib/useMe";
 
 const ASSESS_BASE = "https://assess.wetreadwell.com";
 
@@ -19,6 +20,7 @@ function ActionBtn({ href, onClick, children, primary }: { href?: string; onClic
 
 export default function CandidateProfile() {
   const api = useApi();
+  const { isAdmin } = useMe();
   const params = useParams<{ id: string }>();
   const id = params?.id as string;
   const [c, setC] = useState<CandidateFull | null>(null);
@@ -130,7 +132,7 @@ export default function CandidateProfile() {
         </div>
 
         <div className="space-y-6">
-          {(c.assessments.length > 0 || assessUrl) && (
+          {c.assessments.length > 0 && (
             <section className="rounded-2xl bg-white p-5 ring-1 ring-slate-200">
               <h2 className="mb-3 flex items-center gap-2 text-lg font-bold text-slate-900">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-sky-600" aria-hidden><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>
@@ -143,13 +145,17 @@ export default function CandidateProfile() {
                     <dd className="text-sm font-bold text-slate-900">{a.rating}</dd>
                   </div>
                 ))}
-                {assessUrl && (
-                  <div className="flex items-center justify-between py-2">
-                    <dt className="text-sm text-slate-600">Personality type</dt>
-                    <dd><a href={assessUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm font-bold text-sky-700 hover:underline">View report ↗</a></dd>
-                  </div>
-                )}
               </dl>
+            </section>
+          )}
+          {(c.personality_type || c.personality_summary || (isAdmin && assessUrl)) && (
+            <section className="rounded-2xl bg-white p-5 ring-1 ring-slate-200">
+              <h2 className="mb-2 text-lg font-bold text-slate-900">Personality</h2>
+              {c.personality_type && <p className="text-base font-bold text-slate-900">{c.personality_type}</p>}
+              {c.personality_summary && <p className="mt-1 text-sm leading-relaxed text-slate-600">{c.personality_summary}</p>}
+              {isAdmin && assessUrl && (
+                <a href={assessUrl} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-sky-700 hover:underline">View full Assess report ↗</a>
+              )}
             </section>
           )}
           <section className="rounded-2xl bg-white p-5 ring-1 ring-slate-200">

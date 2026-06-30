@@ -59,6 +59,8 @@ export interface CandidateFull {
   is_published: boolean;
   assess_job_id: string | null;
   assess_candidate_id: string | null;
+  personality_type: string | null;
+  personality_summary: string | null;
   skills: string[];
   software: string[];
   skill_ids: string[];
@@ -88,6 +90,8 @@ export interface CandidateInput {
   is_published?: boolean;
   assess_job_id?: string | null;
   assess_candidate_id?: string | null;
+  personality_type?: string | null;
+  personality_summary?: string | null;
   skill_ids: string[];
   software_ids: string[];
   assessments: { assessment_id: string; rating: string }[];
