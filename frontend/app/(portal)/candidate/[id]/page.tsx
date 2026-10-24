@@ -66,7 +66,7 @@ export default function CandidateProfile() {
   );
 
   const first = c.full_name.split(" ")[0];
-  const assessUrl = c.assess_job_id && c.assess_candidate_id ? `${ASSESS_BASE}/hire/${c.assess_job_id}/candidate/${c.assess_candidate_id}` : null;
+  const assessUrl = c.assess_candidate_id ? `${ASSESS_BASE}/r/${c.assess_candidate_id}` : null;
 
   return (
     <div className="animate-rise space-y-6">

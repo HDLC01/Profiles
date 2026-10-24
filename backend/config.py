@@ -35,3 +35,11 @@ ADMIN_EMAILS = {
     for e in (os.environ.get("ADMIN_EMAILS", "hanz@wetreadwell.com,kyle@wetreadwell.com")).split(",")
     if e.strip()
 }
+
+# Any email at these domains is treated as staff (admin) — so every @wetreadwell.com
+# employee gets candidate CRUD without needing an explicit allowlist entry.
+ADMIN_DOMAINS = {
+    d.strip().lower().lstrip("@")
+    for d in (os.environ.get("ADMIN_DOMAINS", "wetreadwell.com")).split(",")
+    if d.strip()
+}

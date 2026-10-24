@@ -2,7 +2,9 @@
 import os
 import re
 import uuid
+from urllib.parse import urlparse
 
+import httpx
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import bindparam, text
@@ -145,6 +147,101 @@ def _full(conn, cid: str, is_admin: bool) -> dict | None:
     d["skill_ids"], d["software_ids"] = skill_ids, software_ids
     d["assessments"] = assessments
     return d
+
+
+def _assess_id(raw: str) -> str:
+    """Defensively extract an Assess candidate id from a raw id, a `/r/<id>`
+    report link, or an `/api/report/<id>` URL. Strips query/fragment and takes
+    the last non-empty path segment. The frontend normally does this, but we
+    re-do it server-side because the input is untrusted."""
+    raw = (raw or "").strip()
+    if not raw:
+        raise HTTPException(status_code=422, detail="Missing Assess candidate id")
+    candidate = raw
+    if "://" in raw or "/" in raw:
+        path = urlparse(raw).path if "://" in raw else raw
+        segments = [s for s in path.split("/") if s]
+        if segments:
+            candidate = segments[-1]
+    candidate = candidate.split("?")[0].split("#")[0].strip()
+    if not candidate:
+        raise HTTPException(status_code=422, detail="Could not read an Assess id from that input")
+    return candidate
+
+
+def _resolve_catalog(conn, table: str, names: list) -> tuple[list[str], list[str]]:
+    """Match incoming name strings (case-insensitively) against the existing
+    catalog table. Returns (matched_ids, all_input_names). Unmatched names are
+    surfaced so the staffer can add them via the existing form UI — we never
+    create catalog rows here."""
+    clean = [n.strip() for n in (names or []) if isinstance(n, str) and n.strip()]
+    clean = list(dict.fromkeys(clean))
+    if not clean:
+        return [], []
+    rows = conn.execute(text(
+        f"select id, name from {table} where lower(name) in :names"
+    ).bindparams(bindparam("names", expanding=True)), {"names": [n.lower() for n in clean]}).mappings().all()
+    by_lower = {r["name"].lower(): str(r["id"]) for r in rows}
+    matched_ids = [by_lower[n.lower()] for n in clean if n.lower() in by_lower]
+    return matched_ids, clean
+
+
+@router.get("/candidates/assess-import")
+def assess_import(request: Request, assess_candidate_id: str):
+    """Admin-only: fetch a candidate's PUBLIC Assess report and return a prefill
+    object (existing Profiles fields only) for the New-candidate form. Never
+    creates anything — pure read + map. Declared before /candidates/{cid} so the
+    literal path wins over the path-param route."""
+    require_admin(request)
+    cid = _assess_id(assess_candidate_id)
+    url = f"{config.ASSESS_BASE_URL.rstrip('/')}/api/report/{cid}"
+    try:
+        resp = httpx.get(url, timeout=10.0, follow_redirects=True)
+    except httpx.HTTPError:
+        raise HTTPException(status_code=502, detail="Could not reach the Assess service. Try again shortly.")
+    if resp.status_code == 404:
+        raise HTTPException(status_code=404, detail=f"No Assess report found for id '{cid}'.")
+    if resp.status_code != 200:
+        raise HTTPException(status_code=502, detail=f"Assess returned an unexpected status ({resp.status_code}).")
+    try:
+        report = resp.json()
+    except ValueError:
+        raise HTTPException(status_code=502, detail="Assess returned a response we could not read.")
+    if not isinstance(report, dict):
+        raise HTTPException(status_code=502, detail="Assess returned an unexpected report shape.")
+
+    cand = report.get("candidate") or {}
+    job = report.get("job") or {}
+    behavioral = report.get("behavioral") or {}
+    ref = (behavioral.get("reference_profile") or {}) if isinstance(behavioral, dict) else {}
+    narrative = (behavioral.get("narrative") or {}) if isinstance(behavioral, dict) else {}
+    if not isinstance(cand, dict):
+        cand = {}
+    if not isinstance(job, dict):
+        job = {}
+
+    def _s(v):  # coerce to a trimmed string or None
+        return v.strip() if isinstance(v, str) and v.strip() else None
+
+    with connect() as conn:
+        skill_ids, skill_names = _resolve_catalog(conn, "skills", cand.get("skills"))
+        software_ids, software_names = _resolve_catalog(conn, "software", cand.get("software"))
+
+    return {
+        "full_name": _s(cand.get("full_name")),
+        "role_title": _s(job.get("name")),
+        "personality_type": _s(ref.get("name")) if isinstance(ref, dict) else None,
+        "personality_summary": _s(narrative.get("summary")) if isinstance(narrative, dict) else None,
+        "assess_job_id": _s(str(job.get("id"))) if job.get("id") is not None else None,
+        "assess_candidate_id": _s(str(cand.get("id"))) if cand.get("id") is not None else _s(cid),
+        # FK chips that already exist in our catalog
+        "skill_ids": skill_ids,
+        "software_ids": software_ids,
+        # raw names from the report (so the staffer sees what came in and can add
+        # any that didn't match an existing catalog item)
+        "skill_names": skill_names,
+        "software_names": software_names,
+    }
 
 
 @router.get("/candidates/{cid}")

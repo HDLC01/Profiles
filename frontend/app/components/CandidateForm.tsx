@@ -7,6 +7,22 @@ import { useApi, type Catalog, type CandidateFull, type CandidateInput, type Cat
 const RATINGS = ["Below average", "Average", "Above average", "Well above average", "Exceptional"];
 const STATUSES = ["new", "active", "archived"];
 
+// Pull an Assess candidate id out of whatever the staffer pasted: a raw id, a
+// `/r/<id>` report link, or an `/api/report/<id>` URL. Falls back to the last
+// non-empty path segment with any query/fragment stripped.
+function extractAssessId(input: string): string {
+  const raw = input.trim();
+  if (!raw) return "";
+  let path = raw;
+  try {
+    if (raw.includes("://")) path = new URL(raw).pathname;
+  } catch {
+    /* not a URL — treat as-is */
+  }
+  const seg = path.split("/").filter(Boolean).pop() ?? path;
+  return seg.split("?")[0].split("#")[0].trim();
+}
+
 function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
   return (
     <label className="block">
@@ -117,6 +133,11 @@ export default function CandidateForm({ initial }: { initial?: CandidateFull }) 
   const [error, setError] = useState<string | null>(null);
   const [genBusy, setGenBusy] = useState(false);
 
+  // "Import from Assess" (create flow only) — pre-fills the form, never saves.
+  const [assessRef, setAssessRef] = useState("");
+  const [importBusy, setImportBusy] = useState(false);
+  const [importMsg, setImportMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+
   const [f, setF] = useState({
     full_name: initial?.full_name ?? "",
     role_title: initial?.role_title ?? "US Accountant/Bookkeeper",
@@ -161,6 +182,67 @@ export default function CandidateForm({ initial }: { initial?: CandidateFull }) 
   const toggle = (setter: React.Dispatch<React.SetStateAction<Set<string>>>) => (id: string) =>
     setter((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
+  // Resolve raw skill/software names from the report into catalog ids: select
+  // ones that already exist, and create (then select) any that don't — mirrors
+  // the MultiSelect "Add" button so every imported tag shows up.
+  async function resolveTags(
+    kind: CatalogKind,
+    names: string[],
+    matchedIds: string[],
+    opts: { id: string; name: string }[],
+    setOpts: React.Dispatch<React.SetStateAction<{ id: string; name: string }[]>>,
+    setSel: React.Dispatch<React.SetStateAction<Set<string>>>,
+  ) {
+    const ids = new Set(matchedIds);
+    const known = new Set(opts.map((o) => o.name.trim().toLowerCase()));
+    const matchedNames = new Set(opts.filter((o) => matchedIds.includes(o.id)).map((o) => o.name.trim().toLowerCase()));
+    const added: { id: string; name: string }[] = [];
+    for (const name of names) {
+      const key = name.trim().toLowerCase();
+      if (!key || matchedNames.has(key) || known.has(key)) continue;
+      try {
+        const item = await api.createCatalogItem(kind, { name: name.trim() });
+        added.push({ id: item.id, name: item.name });
+        ids.add(item.id);
+        known.add(key);
+      } catch {
+        /* skip a tag we couldn't create; staffer can still add it manually */
+      }
+    }
+    if (added.length) setOpts((p) => [...p, ...added]);
+    setSel(ids);
+  }
+
+  async function importFromAssess() {
+    if (importBusy) return;
+    const id = extractAssessId(assessRef);
+    if (!id) {
+      setImportMsg({ kind: "err", text: "Paste an Assess report link or candidate ID first." });
+      return;
+    }
+    setImportBusy(true);
+    setImportMsg(null);
+    try {
+      const p = await api.assessImport(id);
+      setF((prev) => ({
+        ...prev,
+        full_name: p.full_name ?? prev.full_name,
+        role_title: p.role_title ?? prev.role_title,
+        personality_type: p.personality_type ?? prev.personality_type,
+        personality_summary: p.personality_summary ?? prev.personality_summary,
+        assess_job_id: p.assess_job_id ?? prev.assess_job_id,
+        assess_candidate_id: p.assess_candidate_id ?? prev.assess_candidate_id,
+      }));
+      await resolveTags("skills", p.skill_names, p.skill_ids, skillOpts, setSkillOpts, setSkills);
+      await resolveTags("software", p.software_names, p.software_ids, softwareOpts, setSoftwareOpts, setSoftware);
+      setImportMsg({ kind: "ok", text: `Imported ${p.full_name || "candidate"} from Assess. Review the fields, then save.` });
+    } catch (ex) {
+      setImportMsg({ kind: "err", text: (ex as Error)?.message || "Import failed." });
+    } finally {
+      setImportBusy(false);
+    }
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (saving) return;
@@ -203,6 +285,35 @@ export default function CandidateForm({ initial }: { initial?: CandidateFull }) 
   return (
     <form onSubmit={submit} className="space-y-6">
       {error && <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
+
+      {!initial && (
+        <section className="space-y-3 rounded-2xl border border-sky-100 bg-sky-50/60 p-5 ring-1 ring-sky-100">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">Import from Assess</h2>
+            <p className="text-xs text-slate-500">Pre-fill this form from a candidate&apos;s Assess report. You can still edit everything before saving.</p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              className={inputCls}
+              value={assessRef}
+              onChange={(e) => setAssessRef(e.target.value)}
+              placeholder="Paste the Assess report link or candidate ID"
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void importFromAssess(); } }}
+            />
+            <button
+              type="button"
+              onClick={() => void importFromAssess()}
+              disabled={importBusy || !assessRef.trim()}
+              className="shrink-0 rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:opacity-50"
+            >
+              {importBusy ? "Importing…" : "Import"}
+            </button>
+          </div>
+          {importMsg && (
+            <p className={`text-xs ${importMsg.kind === "ok" ? "text-emerald-700" : "text-rose-600"}`}>{importMsg.text}</p>
+          )}
+        </section>
+      )}
 
       <section className="space-y-4 rounded-2xl bg-white p-5 ring-1 ring-slate-200">
         <h2 className="text-base font-bold text-slate-900">Basics</h2>

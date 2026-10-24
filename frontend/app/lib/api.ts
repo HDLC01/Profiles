@@ -97,6 +97,23 @@ export interface CandidateInput {
   assessments: { assessment_id: string; rating: string }[];
 }
 
+// Prefill returned by the "Import from Assess" endpoint. Every scalar may be
+// null (the report is partial / external). skill_ids/software_ids are catalog
+// FKs we matched; skill_names/software_names are the raw names from the report
+// (for display + so the staffer can add any that didn't match).
+export interface AssessPrefill {
+  full_name: string | null;
+  role_title: string | null;
+  personality_type: string | null;
+  personality_summary: string | null;
+  assess_job_id: string | null;
+  assess_candidate_id: string | null;
+  skill_ids: string[];
+  software_ids: string[];
+  skill_names: string[];
+  software_names: string[];
+}
+
 function createApi(getToken: () => Promise<string | null>) {
   async function req<T>(path: string, init?: RequestInit): Promise<T> {
     const token = await getToken();
@@ -138,6 +155,8 @@ function createApi(getToken: () => Promise<string | null>) {
     updateCandidate: (id: string, body: CandidateInput) => req<CandidateFull>(`/candidates/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
     deleteCandidate: (id: string) => req<{ ok: boolean }>(`/candidates/${id}`, { method: "DELETE" }),
     generateResume: (id: string) => req<{ resume_url: string }>(`/candidates/${id}/resume`, { method: "POST" }),
+    assessImport: (assessCandidateId: string) =>
+      req<AssessPrefill>(`/candidates/assess-import?assess_candidate_id=${encodeURIComponent(assessCandidateId)}`),
     createCatalogItem: (kind: CatalogKind, body: { name: string; active?: boolean; ordering?: number }) =>
       req<CatalogItem>(`/catalog/${kind}`, { method: "POST", body: JSON.stringify(body) }),
     updateCatalogItem: (kind: CatalogKind, id: string, body: { name: string; active: boolean; ordering: number }) =>

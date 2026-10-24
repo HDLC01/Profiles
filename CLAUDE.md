@@ -1,55 +1,96 @@
 # Profiles — CLAUDE.md
 
 ## What this is
-A candidate portal for **Cloud Accountant Staffing (CAS)** — Will's *other* company (separate from
-Treadwell). Clients sign in, browse offshore accounting candidates, read in-depth profiles, build a
-shortlist, and book an interview. Staff manage candidates through an intake form and standardized
-resumes. Rebuild of `portal.cloudaccountantstaffing.com` that we own and control.
 
-- **Repo:** github.com/HDLC01/Profiles · **Domain:** profiles.wetreadwell.com · **VPS dir:** /opt/profiles
-- **Branding:** Cloud Accountant Staffing ("Build Your Dream Team"), offshore candidates.
+The Cloud Accountant Staffing (CAS) **Profiles** portal: an authenticated client catalog
+of offshore accounting candidates plus a staff administration area for intake, taxonomy,
+media, résumés, and publication. CAS is Will's separate company, not a Treadwell product.
 
-## SEPARATE SYSTEM — hard boundary
-Standalone project: own git repo, own subdomain, own dockerized Postgres, own containers + nginx block.
-It does NOT import from or deploy with the Treadwell systems. Proven patterns are **COPIED, never
-imported**. Shares only the physical VPS (50.6.110.215) and the deploy tooling conventions.
+- Repository: `github.com/HDLC01/Profiles`
+- Live domain: `https://profiles.wetreadwell.com`
+- VPS directory: `/opt/profiles`
+- Brand: Cloud Accountant Staffing — “Build Your Dream Team”
 
-- **Port map:** web (Next.js) `127.0.0.1:8900` · api (FastAPI) `127.0.0.1:8901` · local-dev Postgres
-  `127.0.0.1:5437`. (Taken elsewhere: 8888 proposal · 8890 newsfeed · 8892 roadmap · 8894 connector ·
-  8896/8897 assess · 8898/8899 portal · db 5434 assess / 5436 portal.)
+It is a standalone project with its own repository, Postgres database, containers, nginx
+configuration, and deployment tooling. Never import from a Treadwell repository; copy or
+adapt only a pattern that makes sense for this application's stack and security model.
 
-## Stack
-- **Frontend:** Next.js 16 (App Router) + Tailwind v4 + `@clerk/nextjs` (auth). Public client portal + admin.
-- **Backend:** FastAPI (3.12) + SQLAlchemy 2 / psycopg3 + dockerized Postgres 16 (own DB; never Supabase
-  for data). FastAPI middleware verifies the **Clerk JWT via Clerk JWKS** (RS256; check `iss`/`azp`),
-  extracts user + role. Admin routes require `role=admin`.
-- **Resume PDF:** LibreOffice headless docx→PDF + python-docx `{{token}}`/`{{#block}}` fill (ported from
-  the Treadwell proposal tool). Generate from intake data; allow manual upload override.
-- **Booking:** Calendly embed (configurable URL).
-- **Media:** `storage.py` abstraction → VPS Docker volume + nginx `/media` for now; swap to a CDN
-  (Cloudflare R2 for images/PDFs, Bunny/Cloudflare Stream for video) before production traffic. The
-  1 vCPU / 2 GB VPS must NOT serve production video.
+## Current implementation — verified from source on 2026-07-22
 
-## Auth (Clerk) — roles
-- `admin` — staff: candidate CRUD, intake, taxonomy CRUD, user approval.
-- `client` — companies: browse, shortlist, book. New sign-ups land `status=pending` until an admin approves.
-- Role lives in Clerk `publicMetadata.role`, mirrored into the `profiles` table.
+- The site was cut over live on 2026-06-30. The core client portal, staff admin,
+  standardized résumé generator, and client-safe personality summary are implemented.
+- Frontend: Next.js 16 App Router, React 19, Tailwind v4, and Clerk. Read
+  `frontend/AGENTS.md` before editing this version of Next.
+- Backend: FastAPI, SQLAlchemy/psycopg, and its own Postgres 16 database. Migrations
+  bootstrap core profiles, taxonomies, and personality fields.
+- Auth: Clerk RS256 JWT verification through Clerk JWKS. The frontend protects all routes
+  except sign-in/sign-up; the API receives a bearer token and independently validates it.
+- Production topology: Next.js `127.0.0.1:8900`, FastAPI `127.0.0.1:8901`, Postgres
+  internal to Compose. nginx is the public surface.
 
-## Personality type → Assess
-Each candidate links to their real **Treadwell Assess** report (`assess_job_id` + `assess_candidate_id`).
-NOTE: the Assess report is `@wetreadwell.com`-gated, so CAS clients can't open it directly — resolve by
-adding a tokenized public "share" view to Assess, or show an inline personality summary in Profiles and
-reserve the deep-link for staff. (Open decision — see plan.)
+## Roles and access
 
-## Golden rules
-- **TEST LOCALLY FIRST.** Never deploy until it runs + passes local smoke tests and Hanz approves.
-- **Never build Docker images on the VPS** (browns out the box). Build off-box, ship prebuilt via
-  `deploy/ship.sh` (docker save | ssh docker load | compose up -d, no --build).
-- Destructive actions need confirm dialogs; lists paginate at 25/page (house rules).
-- Prose/emails: run stop-slop. UI: ui-ux-pro-max, mobile-first, 0 console errors, no horizontal overflow.
-- **Time is billed separately** — log every work session in `TIME_LOG.md`.
+- `client` users browse published candidates, manage their own shortlist, and book an
+  interview. New client profiles are pending until staff approves them.
+- `admin` users manage candidates, intake, publishing, taxonomies, uploads, and résumé
+  generation. The API, not just the UI, must enforce this.
+- Admin identity is derived from Clerk claims and the configured bootstrap emails/domains.
+  Never expose a Clerk secret or accept a client-asserted role.
 
-## Run locally (target)
-- DB:       `docker compose up -d db`            (Postgres on 127.0.0.1:5437)
-- Backend:  `cd backend && uv run uvicorn main:app --reload --port 8901`
-- Frontend: `cd frontend && npm run dev`         (Next.js on :3000, rewrites /api → :8901)
+## Data model and integration boundaries
+
+- `profiles` is the Clerk-user mirror; `candidates` holds public profile data and media
+  URLs; skills, software, and assessments are normalized taxonomies with join tables;
+  `shortlists` are scoped to the Clerk user; `events` is the audit trail.
+- Personality is client-safe: `personality_type` and `personality_summary` display to
+  clients. The deep Assess report link is staff-only because Treadwell Assess is
+  domain-gated. Do not expose private assessment data to clients.
+- Media currently stores on the VPS `media` Docker volume and serves through `/api/media`.
+  It is acceptable for development/light images and PDFs but not production video traffic.
+  Follow `deploy/MEDIA.md` to migrate images/PDFs to R2 and video to a streaming CDN.
+- Resume generation uses server-side rendering; manual upload can override generated output.
+
+## Code map
+
+| Location | Responsibility |
+|---|---|
+| `backend/main.py`, `db.py`, `migrate.py` | API boot, DB lifecycle, migrations/seed. |
+| `backend/clerk_auth.py`, `deps.py` | Clerk JWT validation and role dependencies. |
+| `backend/routers/candidates.py` | Client listing/detail plus admin candidate CRUD and résumé action. |
+| `backend/routers/account.py` | Current profile and shortlist APIs. |
+| `backend/routers/catalog.py`, `uploads.py` | Taxonomy and admin media management. |
+| `backend/services/resume_pdf.py` | Standardized résumé output. |
+| `frontend/app/(portal)/` | Client pages and admin routes. |
+| `frontend/app/components/` | Candidate cards/forms and staff guards/navigation. |
+| `frontend/app/lib/api.ts` | Central bearer-token API client. |
+
+## Local development and checks
+
+```powershell
+# project root
+docker compose up -d db
+
+cd backend
+uv run uvicorn main:app --reload --port 8901
+python -m pytest
+
+cd ..\frontend
+npm run dev
+npm run lint
+npm run test
+npm run build
+```
+
+The browser frontend runs on `:3000` in development and uses the API proxy/configuration.
+Use private development Clerk/Postgres credentials only; never add `.env` contents,
+generated media, logs, or deployment output to source control.
+
+## Deployment and operating rules
+
+- Build images off-box with `deploy/ship.sh`; it ships prebuilt Linux images and waits
+  for `:8901/api/health`. Do not run `docker compose --build` on the constrained shared VPS.
+- The `media` volume persists local assets. Back it up before destructive maintenance.
+- List views paginate at 25; deletion needs a confirmation dialog; mobile views must not
+  horizontally overflow.
+- Time is billed separately to CAS. Append substantive work to `TIME_LOG.md`; Clockify is
+  the authoritative total.

@@ -20,7 +20,10 @@ def current_user(request: Request) -> dict:
 def _sync_profile(conn, user: dict) -> dict:
     sub = user["sub"]
     email = (user.get("email") or "").lower() or None
-    is_admin_email = bool(email) and email in config.ADMIN_EMAILS
+    is_admin_email = bool(email) and (
+        email in config.ADMIN_EMAILS
+        or any(email.endswith("@" + d) for d in config.ADMIN_DOMAINS)
+    )
     row = conn.execute(
         text("select clerk_user_id, email, role, status from profiles where clerk_user_id = :c"),
         {"c": sub},
