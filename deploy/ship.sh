@@ -5,16 +5,21 @@
 # containers. Building images ON it browns out every site. So we build HERE,
 # ship the images over SSH, and the VPS only loads + restarts (no build).
 #
-# Prereqs: local Docker running; SSH key at ~/.ssh/treadwell_vps; the VPS already
-# bootstrapped once via deploy/install-vps.sh (repo at /opt/profiles + .env + nginx).
+# Prereqs: local Docker running; the `treadwell-vps` alias in ~/.ssh/config; the VPS
+# already bootstrapped once via deploy/install-vps.sh (repo at /opt/profiles + .env + nginx).
+# The alias supplies the host, port, user and key. It logs in as hanztwell, and the
+# box runs every command (and this script's stdin) as root via sudo.
 # Usage:   bash deploy/ship.sh
+#          VPS_HOST / VPS_USER / SSH_KEY still override the target if ever needed.
 set -euo pipefail
 
-VPS_HOST="${VPS_HOST:-50.6.110.215}"
-VPS_USER="${VPS_USER:-root}"
-SSH_KEY="${SSH_KEY:-$HOME/.ssh/treadwell_vps}"
+VPS_HOST="${VPS_HOST:-treadwell-vps}"
+VPS_USER="${VPS_USER:-}"
+SSH_KEY="${SSH_KEY:-}"
 APP_DIR="/opt/profiles"
-SSH=(ssh -i "$SSH_KEY" -o ConnectTimeout=20 "${VPS_USER}@${VPS_HOST}")
+SSH=(ssh -o ConnectTimeout=20)
+if [ -n "$SSH_KEY" ]; then SSH+=(-i "$SSH_KEY"); fi
+SSH+=("${VPS_USER:+${VPS_USER}@}${VPS_HOST}")
 
 cd "$(dirname "$0")/.."
 
